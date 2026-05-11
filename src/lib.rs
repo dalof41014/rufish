@@ -22,11 +22,32 @@
 //!     Ok(())
 //! }
 //! ```
+//!
+//! ## Builder Pattern
+//!
+//! ```no_run
+//! use rufish::RedfishClient;
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! // Custom reqwest client + existing session token
+//! let custom = reqwest::Client::builder()
+//!     .use_native_tls()
+//!     .http1_only()
+//!     .build()?;
+//!
+//! let client = RedfishClient::builder("10.0.0.5")
+//!     .credentials("admin", "password")
+//!     .client(custom)
+//!     .session("saved-token", "/redfish/v1/SessionService/Sessions/1")
+//!     .build()?;
+//! # Ok(())
+//! # }
+//! ```
 
 mod client;
 mod error;
 mod types;
 
-pub use client::RedfishClient;
+pub use client::{RedfishClient, RedfishClientBuilder};
 pub use error::{RedfishError, Result};
 pub use types::*;

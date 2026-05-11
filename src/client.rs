@@ -5,6 +5,64 @@ use serde_json::Value;
 use crate::error::{RedfishError, Result};
 use crate::types::*;
 
+/// Builder for constructing a [`RedfishClient`] with custom configuration.
+pub struct RedfishClientBuilder {
+    host: String,
+    username: Option<String>,
+    password: Option<String>,
+    client: Option<Client>,
+    session_token: Option<String>,
+    session_uri: Option<String>,
+}
+
+impl RedfishClientBuilder {
+    /// Set credentials for session-based authentication.
+    pub fn credentials(mut self, username: &str, password: &str) -> Self {
+        self.username = Some(username.to_string());
+        self.password = Some(password.to_string());
+        self
+    }
+
+    /// Provide a pre-configured reqwest Client.
+    pub fn client(mut self, client: Client) -> Self {
+        self.client = Some(client);
+        self
+    }
+
+    /// Inject an existing session token and URI (for session persistence).
+    pub fn session(mut self, token: &str, session_uri: &str) -> Self {
+        self.session_token = Some(token.to_string());
+        self.session_uri = Some(session_uri.to_string());
+        self
+    }
+
+    /// Build the [`RedfishClient`].
+    pub fn build(self) -> Result<RedfishClient> {
+        let base_url = if self.host.starts_with("http") {
+            self.host.trim_end_matches('/').to_string()
+        } else {
+            format!("https://{}", self.host.trim_end_matches('/'))
+        };
+
+        let client = match self.client {
+            Some(c) => c,
+            None => Client::builder()
+                .danger_accept_invalid_certs(true)
+                .timeout(std::time::Duration::from_secs(30))
+                .build()?,
+        };
+
+        Ok(RedfishClient {
+            base_url,
+            username: self.username.unwrap_or_default(),
+            password: self.password.unwrap_or_default(),
+            client,
+            session_token: self.session_token,
+            session_uri: self.session_uri,
+        })
+    }
+}
+
 /// Async Redfish client for BMC management.
 pub struct RedfishClient {
     base_url: String,
@@ -16,28 +74,38 @@ pub struct RedfishClient {
 }
 
 impl RedfishClient {
+    /// Create a builder for configuring a RedfishClient.
+    pub fn builder(host: &str) -> RedfishClientBuilder {
+        RedfishClientBuilder {
+            host: host.to_string(),
+            username: None,
+            password: None,
+            client: None,
+            session_token: None,
+            session_uri: None,
+        }
+    }
+
     /// Create a new Redfish client.
     /// `host` can be IP or hostname. Uses HTTPS by default.
     pub fn new(host: &str, username: &str, password: &str) -> Result<Self> {
-        let base_url = if host.starts_with("http") {
-            host.trim_end_matches('/').to_string()
-        } else {
-            format!("https://{}", host.trim_end_matches('/'))
-        };
+        Self::builder(host).credentials(username, password).build()
+    }
 
-        let client = Client::builder()
-            .danger_accept_invalid_certs(true)
-            .timeout(std::time::Duration::from_secs(30))
-            .build()?;
+    /// Inject an existing session token and URI.
+    pub fn set_session(&mut self, token: &str, session_uri: &str) {
+        self.session_token = Some(token.to_string());
+        self.session_uri = Some(session_uri.to_string());
+    }
 
-        Ok(Self {
-            base_url,
-            username: username.to_string(),
-            password: password.to_string(),
-            client,
-            session_token: None,
-            session_uri: None,
-        })
+    /// Get the current session token, if any.
+    pub fn session_token(&self) -> Option<&str> {
+        self.session_token.as_deref()
+    }
+
+    /// Get the current session URI, if any.
+    pub fn session_uri(&self) -> Option<&str> {
+        self.session_uri.as_deref()
     }
 
     /// Establish a Redfish session (POST to SessionService).
@@ -579,6 +647,51 @@ impl RedfishClient {
             }
         }
         Ok(all)
+    }
+
+    // --- Manager Ethernet Interfaces ---
+
+    /// List ethernet interfaces for a manager (BMC network).
+    pub async fn list_manager_ethernet_interfaces(&self, manager_id: &str) -> Result<Collection> {
+        self.get_as(&format!("/redfish/v1/Managers/{}/EthernetInterfaces", manager_id)).await
+    }
+
+    /// Get a specific manager ethernet interface.
+    pub async fn get_manager_ethernet_interface(&self, manager_id: &str, iface_id: &str) -> Result<EthernetInterface> {
+        self.get_as(&format!("/redfish/v1/Managers/{}/EthernetInterfaces/{}", manager_id, iface_id)).await
+    }
+
+    /// Patch a manager ethernet interface (e.g. change IP settings).
+    pub async fn patch_manager_ethernet_interface(&self, manager_id: &str, iface_id: &str, body: &Value) -> Result<Value> {
+        self.patch(&format!("/redfish/v1/Managers/{}/EthernetInterfaces/{}", manager_id, iface_id), body).await
+    }
+
+    // --- Chassis Indicator LED ---
+
+    /// Get chassis location indicator state.
+    /// Returns `Some(true)` if active, `Some(false)` if off, `None` if unsupported.
+    pub async fn get_chassis_indicator(&self, chassis_id: &str) -> Result<Option<bool>> {
+        let val = self.get(&format!("/redfish/v1/Chassis/{}", chassis_id)).await?;
+        if let Some(active) = val.get("LocationIndicatorActive").and_then(|v| v.as_bool()) {
+            return Ok(Some(active));
+        }
+        if let Some(led) = val.get("IndicatorLED").and_then(|v| v.as_str()) {
+            return Ok(Some(led != "Off"));
+        }
+        Ok(None)
+    }
+
+    /// Set chassis location indicator on or off.
+    /// Tries `LocationIndicatorActive` first, falls back to `IndicatorLED`.
+    pub async fn set_chassis_indicator(&self, chassis_id: &str, on: bool) -> Result<Value> {
+        let path = format!("/redfish/v1/Chassis/{}", chassis_id);
+        let val = self.get(&path).await?;
+        if val.get("LocationIndicatorActive").is_some() {
+            self.patch(&path, &serde_json::json!({"LocationIndicatorActive": on})).await
+        } else {
+            let led = if on { "Lit" } else { "Off" };
+            self.patch(&path, &serde_json::json!({"IndicatorLED": led})).await
+        }
     }
 
     // --- Internal helpers ---

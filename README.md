@@ -12,13 +12,16 @@
 
 * ✅ Async HTTP/HTTPS client (based on `reqwest` + `tokio`)
 * ✅ Session-based authentication (X-Auth-Token) with fallback to Basic Auth
+* ✅ **Builder pattern** — inject custom `reqwest::Client`, existing session tokens, or credentials
+* ✅ Session persistence — get/set tokens for cross-restart reuse
 * ✅ Self-signed certificate support (common for BMCs)
 * ✅ Typed Rust structs for all major Redfish resources
 * ✅ High-level API for common operations:
   * Systems, Chassis, Managers
   * Power & Thermal monitoring
   * Processors, Memory, Storage, Drives
-  * Ethernet Interfaces
+  * Ethernet Interfaces (System & Manager)
+  * Chassis Indicator LED (LocationIndicatorActive / IndicatorLED)
   * Power control (On/Off/Restart/Cycle)
   * Boot override (PXE, BIOS Setup, HDD, etc.)
   * Account management
@@ -69,15 +72,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+### Builder Pattern
+
+```rust
+use rufish::RedfishClient;
+
+// Custom reqwest client (e.g. native-tls, http1_only)
+let custom = reqwest::Client::builder()
+    .use_native_tls()
+    .http1_only()
+    .danger_accept_invalid_certs(true)
+    .build()?;
+
+let client = RedfishClient::builder("10.0.0.5")
+    .credentials("admin", "password")
+    .client(custom)
+    .build()?;
+
+// Or restore a persisted session (no login needed)
+let client = RedfishClient::builder("10.0.0.5")
+    .credentials("admin", "password")
+    .session("saved-token", "/redfish/v1/SessionService/Sessions/1")
+    .build()?;
+```
+
 ---
 
 ## API Summary
 
-### Session
+### Session & Construction
 
 | Method | Description |
 |--------|-------------|
 | `new(host, user, pass)` | Create client (HTTPS, accepts self-signed certs) |
+| `builder(host)` | Start building a client with custom options |
+| `.credentials(user, pass)` | Set credentials (builder) |
+| `.client(reqwest_client)` | Inject custom reqwest Client (builder) |
+| `.session(token, uri)` | Inject existing session token (builder) |
+| `.build()` | Finalize and create the client (builder) |
+| `set_session(token, uri)` | Inject session token after construction |
+| `session_token()` | Get current token (for persistence) |
+| `session_uri()` | Get current session URI |
 | `login()` | Establish Redfish session |
 | `logout()` | Close session |
 
@@ -95,6 +130,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `list_memory(sys)` / `get_memory(sys, id)` | DIMMs |
 | `list_storage(sys)` / `get_storage(sys, id)` | Storage controllers |
 | `list_ethernet_interfaces(sys)` | NICs |
+| `list_manager_ethernet_interfaces(mgr)` | BMC network interfaces |
+| `get_manager_ethernet_interface(mgr, id)` | Get BMC NIC details |
+| `patch_manager_ethernet_interface(mgr, id, body)` | Update BMC NIC settings |
+| `get_chassis_indicator(chassis)` | Get Indicator LED state |
 | `get_account_service()` / `list_accounts()` | User accounts |
 | `get_update_service()` | Firmware update service |
 | `get_event_service()` | Event subscriptions |
@@ -114,6 +153,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `set_boot_override(id, target, enabled)` | Set boot source |
 | `set_boot_pxe(id)` | Boot to PXE |
 | `set_boot_bios(id)` | Boot to BIOS Setup |
+| `set_chassis_indicator(chassis, on)` | Set Indicator LED on/off |
 | `reset_manager(id, type)` | Reset BMC |
 | `clear_log(mgr, log)` | Clear log service |
 
