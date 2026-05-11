@@ -117,6 +117,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `reset_manager(id, type)` | Reset BMC |
 | `clear_log(mgr, log)` | Clear log service |
 
+### Virtual Media
+
+| Method | Description |
+|--------|-------------|
+| `list_virtual_media(mgr)` | List virtual media devices |
+| `get_virtual_media(mgr, id)` | Get virtual media status |
+| `insert_media(mgr, id, url)` | Mount ISO/IMG from URL |
+| `eject_media(mgr, id)` | Unmount media |
+
+### BIOS & Secure Boot
+
+| Method | Description |
+|--------|-------------|
+| `get_bios(sys)` | Get current BIOS attributes |
+| `get_bios_settings(sys)` | Get pending BIOS settings |
+| `set_bios_attributes(sys, attrs)` | Set BIOS attributes (next boot) |
+| `get_secure_boot(sys)` | Get Secure Boot status |
+| `set_secure_boot(sys, enabled)` | Enable/disable Secure Boot |
+
+### Storage / RAID
+
+| Method | Description |
+|--------|-------------|
+| `list_volumes(sys, storage)` | List RAID volumes |
+| `get_volume(sys, storage, vol)` | Get volume details |
+| `create_volume(sys, storage, body)` | Create RAID volume |
+| `delete_volume(sys, storage, vol)` | Delete volume |
+| `get_drive(path)` | Get drive details |
+
+### Network & Certificates
+
+| Method | Description |
+|--------|-------------|
+| `get_network_protocol(mgr)` | BMC network services (NTP, SSH, etc.) |
+| `set_network_protocol(mgr, settings)` | Update network settings |
+| `list_serial_interfaces(mgr)` | List serial interfaces |
+| `list_certificates(mgr)` | List HTTPS certificates |
+| `replace_certificate(path, pem, type)` | Replace certificate |
+
+### Event Subscriptions
+
+| Method | Description |
+|--------|-------------|
+| `list_subscriptions()` | List event subscriptions |
+| `create_subscription(dest, types, ctx)` | Create subscription |
+| `delete_subscription(id)` | Delete subscription |
+
+### Firmware Update
+
+| Method | Description |
+|--------|-------------|
+| `list_firmware_inventory()` | List firmware items |
+| `get_firmware_item(id)` | Get firmware version info |
+| `simple_update(image_uri)` | Trigger firmware update from URI |
+
+### Tasks & Pagination
+
+| Method | Description |
+|--------|-------------|
+| `list_tasks()` | List async tasks |
+| `get_task(id)` | Get task status |
+| `wait_task(id, timeout_secs)` | Poll until task completes |
+| `get_all_members(path)` | Auto-follow @odata.nextLink |
+
 ### Raw Access
 
 | Method | Description |

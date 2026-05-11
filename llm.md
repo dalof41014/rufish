@@ -265,6 +265,115 @@ for m in systems.members.unwrap_or_default() {
 | `"BiosSetup"` | BIOS/UEFI setup |
 | `"Diags"` | Diagnostics |
 
+## Virtual Media
+
+```rust
+// Mount ISO for OS installation
+client.insert_media("1", "CD", "http://fileserver/os.iso").await?;
+
+// Check status
+let vm = client.get_virtual_media("1", "CD").await?;
+println!("Inserted: {:?}", vm.inserted);
+
+// Eject
+client.eject_media("1", "CD").await?;
+```
+
+## BIOS Settings
+
+```rust
+use serde_json::json;
+
+// Read current BIOS attributes
+let bios = client.get_bios("1").await?;
+println!("Attributes: {:?}", bios.attributes);
+
+// Modify BIOS settings (applied on next boot)
+client.set_bios_attributes("1", &json!({
+    "BootMode": "Uefi",
+    "HyperThreading": "Enabled"
+})).await?;
+```
+
+## Secure Boot
+
+```rust
+let sb = client.get_secure_boot("1").await?;
+println!("Secure Boot enabled: {:?}", sb.secure_boot_enable);
+
+// Disable Secure Boot
+client.set_secure_boot("1", false).await?;
+```
+
+## RAID / Volumes
+
+```rust
+use serde_json::json;
+
+// List volumes
+let vols = client.list_volumes("1", "RAID.Integrated.1-1").await?;
+
+// Create RAID1 volume
+client.create_volume("1", "RAID.Integrated.1-1", &json!({
+    "RAIDType": "RAID1",
+    "Name": "MyVolume",
+    "Drives": [
+        {"@odata.id": "/redfish/v1/Systems/1/Storage/RAID.Integrated.1-1/Drives/Disk.Bay.0:Enclosure.Internal.0-1:RAID.Integrated.1-1"},
+        {"@odata.id": "/redfish/v1/Systems/1/Storage/RAID.Integrated.1-1/Drives/Disk.Bay.1:Enclosure.Internal.0-1:RAID.Integrated.1-1"}
+    ]
+})).await?;
+
+// Delete volume
+client.delete_volume("1", "RAID.Integrated.1-1", "Disk.Virtual.0:RAID.Integrated.1-1").await?;
+```
+
+## Firmware Update
+
+```rust
+// Check current firmware versions
+let fw = client.list_firmware_inventory().await?;
+for m in fw.members.unwrap_or_default() {
+    let item: rufish::SoftwareInventory = client.get_as(&m.odata_id).await?;
+    println!("{}: {}", item.name.unwrap_or_default(), item.version.unwrap_or_default());
+}
+
+// Trigger update (BMC pulls image)
+client.simple_update("http://fileserver/bmc_fw.bin").await?;
+```
+
+## Event Subscriptions
+
+```rust
+// Subscribe to alerts
+client.create_subscription(
+    "https://my-server:8443/events",
+    &["Alert", "StatusChange"],
+    "MyMonitor"
+).await?;
+
+// List subscriptions
+let subs = client.list_subscriptions().await?;
+
+// Delete subscription
+client.delete_subscription("1").await?;
+```
+
+## Task Polling
+
+```rust
+// After triggering a long operation, poll the task
+let task = client.wait_task("42", 300).await?; // wait up to 5 minutes
+println!("Task state: {:?}", task.task_state);
+```
+
+## Pagination
+
+```rust
+// Automatically follow @odata.nextLink for large collections
+let all = client.get_all_members("/redfish/v1/Systems/1/Storage/1/Drives").await?;
+println!("Total drives: {}", all.len());
+```
+
 ## Tips for LLMs
 
 1. Always `login()` before making API calls
