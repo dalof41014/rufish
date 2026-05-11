@@ -357,6 +357,230 @@ impl RedfishClient {
         self.post(&path, &serde_json::json!({})).await
     }
 
+    // --- Virtual Media ---
+
+    /// List virtual media for a manager.
+    pub async fn list_virtual_media(&self, manager_id: &str) -> Result<Collection> {
+        self.get_as(&format!("/redfish/v1/Managers/{}/VirtualMedia", manager_id)).await
+    }
+
+    /// Get a virtual media resource.
+    pub async fn get_virtual_media(&self, manager_id: &str, media_id: &str) -> Result<VirtualMedia> {
+        self.get_as(&format!("/redfish/v1/Managers/{}/VirtualMedia/{}", manager_id, media_id)).await
+    }
+
+    /// Insert (mount) virtual media image.
+    pub async fn insert_media(&self, manager_id: &str, media_id: &str, image_url: &str) -> Result<Value> {
+        let path = format!("/redfish/v1/Managers/{}/VirtualMedia/{}/Actions/VirtualMedia.InsertMedia", manager_id, media_id);
+        self.post(&path, &serde_json::json!({ "Image": image_url })).await
+    }
+
+    /// Eject (unmount) virtual media.
+    pub async fn eject_media(&self, manager_id: &str, media_id: &str) -> Result<Value> {
+        let path = format!("/redfish/v1/Managers/{}/VirtualMedia/{}/Actions/VirtualMedia.EjectMedia", manager_id, media_id);
+        self.post(&path, &serde_json::json!({})).await
+    }
+
+    // --- BIOS ---
+
+    /// Get BIOS attributes.
+    pub async fn get_bios(&self, system_id: &str) -> Result<Bios> {
+        self.get_as(&format!("/redfish/v1/Systems/{}/Bios", system_id)).await
+    }
+
+    /// Get BIOS pending settings.
+    pub async fn get_bios_settings(&self, system_id: &str) -> Result<Bios> {
+        self.get_as(&format!("/redfish/v1/Systems/{}/Bios/Settings", system_id)).await
+    }
+
+    /// Set BIOS attributes (applied on next boot).
+    pub async fn set_bios_attributes(&self, system_id: &str, attributes: &Value) -> Result<Value> {
+        let path = format!("/redfish/v1/Systems/{}/Bios/Settings", system_id);
+        self.patch(&path, &serde_json::json!({ "Attributes": attributes })).await
+    }
+
+    // --- Secure Boot ---
+
+    /// Get Secure Boot status.
+    pub async fn get_secure_boot(&self, system_id: &str) -> Result<SecureBoot> {
+        self.get_as(&format!("/redfish/v1/Systems/{}/SecureBoot", system_id)).await
+    }
+
+    /// Enable or disable Secure Boot.
+    pub async fn set_secure_boot(&self, system_id: &str, enabled: bool) -> Result<Value> {
+        let path = format!("/redfish/v1/Systems/{}/SecureBoot", system_id);
+        self.patch(&path, &serde_json::json!({ "SecureBootEnable": enabled })).await
+    }
+
+    // --- Network Protocol ---
+
+    /// Get manager network protocol settings.
+    pub async fn get_network_protocol(&self, manager_id: &str) -> Result<NetworkProtocol> {
+        self.get_as(&format!("/redfish/v1/Managers/{}/NetworkProtocol", manager_id)).await
+    }
+
+    /// Update network protocol settings (e.g. NTP servers).
+    pub async fn set_network_protocol(&self, manager_id: &str, settings: &Value) -> Result<Value> {
+        self.patch(&format!("/redfish/v1/Managers/{}/NetworkProtocol", manager_id), settings).await
+    }
+
+    // --- Serial Interfaces ---
+
+    /// List serial interfaces for a manager.
+    pub async fn list_serial_interfaces(&self, manager_id: &str) -> Result<Collection> {
+        self.get_as(&format!("/redfish/v1/Managers/{}/SerialInterfaces", manager_id)).await
+    }
+
+    /// Get a serial interface.
+    pub async fn get_serial_interface(&self, manager_id: &str, iface_id: &str) -> Result<SerialInterface> {
+        self.get_as(&format!("/redfish/v1/Managers/{}/SerialInterfaces/{}", manager_id, iface_id)).await
+    }
+
+    // --- Volumes / RAID ---
+
+    /// List volumes for a storage resource.
+    pub async fn list_volumes(&self, system_id: &str, storage_id: &str) -> Result<Collection> {
+        self.get_as(&format!("/redfish/v1/Systems/{}/Storage/{}/Volumes", system_id, storage_id)).await
+    }
+
+    /// Get a specific volume.
+    pub async fn get_volume(&self, system_id: &str, storage_id: &str, volume_id: &str) -> Result<Volume> {
+        self.get_as(&format!("/redfish/v1/Systems/{}/Storage/{}/Volumes/{}", system_id, storage_id, volume_id)).await
+    }
+
+    /// Create a volume (RAID).
+    pub async fn create_volume(&self, system_id: &str, storage_id: &str, body: &Value) -> Result<Value> {
+        let path = format!("/redfish/v1/Systems/{}/Storage/{}/Volumes", system_id, storage_id);
+        self.post(&path, body).await
+    }
+
+    /// Delete a volume.
+    pub async fn delete_volume(&self, system_id: &str, storage_id: &str, volume_id: &str) -> Result<()> {
+        self.delete(&format!("/redfish/v1/Systems/{}/Storage/{}/Volumes/{}", system_id, storage_id, volume_id)).await
+    }
+
+    // --- Drives ---
+
+    /// Get a specific drive.
+    pub async fn get_drive(&self, path: &str) -> Result<Drive> {
+        self.get_as(path).await
+    }
+
+    // --- Certificates ---
+
+    /// List certificates for a manager.
+    pub async fn list_certificates(&self, manager_id: &str) -> Result<Collection> {
+        self.get_as(&format!("/redfish/v1/Managers/{}/NetworkProtocol/HTTPS/Certificates", manager_id)).await
+    }
+
+    /// Get a certificate.
+    pub async fn get_certificate(&self, path: &str) -> Result<Certificate> {
+        self.get_as(path).await
+    }
+
+    /// Replace a certificate (POST new cert to collection or PATCH existing).
+    pub async fn replace_certificate(&self, path: &str, cert_pem: &str, cert_type: &str) -> Result<Value> {
+        self.post(path, &serde_json::json!({
+            "CertificateString": cert_pem,
+            "CertificateType": cert_type
+        })).await
+    }
+
+    // --- Event Subscriptions ---
+
+    /// List event subscriptions.
+    pub async fn list_subscriptions(&self) -> Result<Collection> {
+        self.get_as("/redfish/v1/EventService/Subscriptions").await
+    }
+
+    /// Create an event subscription.
+    pub async fn create_subscription(&self, destination: &str, event_types: &[&str], context: &str) -> Result<Value> {
+        let types: Vec<String> = event_types.iter().map(|s| s.to_string()).collect();
+        self.post("/redfish/v1/EventService/Subscriptions", &serde_json::json!({
+            "Destination": destination,
+            "EventTypes": types,
+            "Protocol": "Redfish",
+            "Context": context
+        })).await
+    }
+
+    /// Delete an event subscription.
+    pub async fn delete_subscription(&self, subscription_id: &str) -> Result<()> {
+        self.delete(&format!("/redfish/v1/EventService/Subscriptions/{}", subscription_id)).await
+    }
+
+    // --- Firmware Update ---
+
+    /// List firmware inventory.
+    pub async fn list_firmware_inventory(&self) -> Result<Collection> {
+        self.get_as("/redfish/v1/UpdateService/FirmwareInventory").await
+    }
+
+    /// Get a firmware inventory item.
+    pub async fn get_firmware_item(&self, item_id: &str) -> Result<SoftwareInventory> {
+        self.get_as(&format!("/redfish/v1/UpdateService/FirmwareInventory/{}", item_id)).await
+    }
+
+    /// Simple firmware update via URI (BMC pulls the image).
+    pub async fn simple_update(&self, image_uri: &str) -> Result<Value> {
+        self.post("/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate", &serde_json::json!({
+            "ImageURI": image_uri
+        })).await
+    }
+
+    // --- Tasks ---
+
+    /// List tasks.
+    pub async fn list_tasks(&self) -> Result<Collection> {
+        self.get_as("/redfish/v1/TaskService/Tasks").await
+    }
+
+    /// Get a task by ID.
+    pub async fn get_task(&self, task_id: &str) -> Result<Task> {
+        self.get_as(&format!("/redfish/v1/TaskService/Tasks/{}", task_id)).await
+    }
+
+    /// Poll a task until completion (max wait in seconds).
+    pub async fn wait_task(&self, task_id: &str, max_wait_secs: u64) -> Result<Task> {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(max_wait_secs);
+        loop {
+            let task = self.get_task(task_id).await?;
+            match task.task_state.as_deref() {
+                Some("Completed") | Some("Exception") | Some("Killed") | Some("Cancelled") => {
+                    return Ok(task);
+                }
+                _ => {}
+            }
+            if std::time::Instant::now() > deadline {
+                return Ok(task);
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        }
+    }
+
+    // --- Pagination ---
+
+    /// GET a collection and automatically follow @odata.nextLink to get all members.
+    pub async fn get_all_members(&self, path: &str) -> Result<Vec<OdataLink>> {
+        let mut all = Vec::new();
+        let mut current_path = path.to_string();
+        loop {
+            let val = self.get(&current_path).await?;
+            if let Some(members) = val.get("Members").and_then(|m| m.as_array()) {
+                for m in members {
+                    if let Some(id) = m.get("@odata.id").and_then(|v| v.as_str()) {
+                        all.push(OdataLink { odata_id: id.to_string() });
+                    }
+                }
+            }
+            match val.get("Members@odata.nextLink").and_then(|v| v.as_str()) {
+                Some(next) => current_path = next.to_string(),
+                None => break,
+            }
+        }
+        Ok(all)
+    }
+
     // --- Internal helpers ---
 
     async fn auth_get(&self, url: &str) -> Result<Response> {

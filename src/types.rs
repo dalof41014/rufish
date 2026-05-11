@@ -382,3 +382,151 @@ pub struct BootOverrideInner {
     pub boot_source_override_target: String,
     pub boot_source_override_enabled: Option<String>,
 }
+
+/// Virtual Media resource.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct VirtualMedia {
+    #[serde(rename = "@odata.id")]
+    pub odata_id: Option<String>,
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub media_types: Option<Vec<String>>,
+    pub image: Option<String>,
+    pub image_name: Option<String>,
+    pub inserted: Option<bool>,
+    pub connected_via: Option<String>,
+    pub write_protected: Option<bool>,
+}
+
+/// BIOS resource.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct Bios {
+    #[serde(rename = "@odata.id")]
+    pub odata_id: Option<String>,
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub attributes: Option<serde_json::Value>,
+}
+
+/// Network Protocol resource (BMC network services).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct NetworkProtocol {
+    #[serde(rename = "@odata.id")]
+    pub odata_id: Option<String>,
+    pub host_name: Option<String>,
+    #[serde(rename = "FQDN")]
+    pub fqdn: Option<String>,
+    #[serde(rename = "HTTP")]
+    pub http: Option<ProtocolEnabled>,
+    #[serde(rename = "HTTPS")]
+    pub https: Option<ProtocolEnabled>,
+    #[serde(rename = "SSH")]
+    pub ssh: Option<ProtocolEnabled>,
+    #[serde(rename = "IPMI")]
+    pub ipmi: Option<ProtocolEnabled>,
+    #[serde(rename = "KVMIP")]
+    pub kvmip: Option<ProtocolEnabled>,
+    #[serde(rename = "NTP")]
+    pub ntp: Option<NtpProtocol>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct ProtocolEnabled {
+    pub protocol_enabled: Option<bool>,
+    pub port: Option<u16>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct NtpProtocol {
+    pub protocol_enabled: Option<bool>,
+    #[serde(rename = "NTPServers")]
+    pub ntp_servers: Option<Vec<String>>,
+}
+
+/// Secure Boot resource.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct SecureBoot {
+    #[serde(rename = "@odata.id")]
+    pub odata_id: Option<String>,
+    pub secure_boot_enable: Option<bool>,
+    pub secure_boot_current_boot: Option<String>,
+    pub secure_boot_mode: Option<String>,
+}
+
+/// Volume resource (RAID).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct Volume {
+    #[serde(rename = "@odata.id")]
+    pub odata_id: Option<String>,
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub capacity_bytes: Option<u64>,
+    pub volume_type: Option<String>,
+    #[serde(rename = "RAIDType")]
+    pub raid_type: Option<String>,
+    pub status: Option<Status>,
+    pub drives: Option<Vec<OdataLink>>,
+}
+
+/// Certificate resource.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct Certificate {
+    #[serde(rename = "@odata.id")]
+    pub odata_id: Option<String>,
+    pub id: Option<String>,
+    pub certificate_string: Option<String>,
+    pub certificate_type: Option<String>,
+    pub issuer: Option<serde_json::Value>,
+    pub subject: Option<serde_json::Value>,
+    pub valid_not_before: Option<String>,
+    pub valid_not_after: Option<String>,
+}
+
+/// Event Destination (subscription).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct EventDestination {
+    #[serde(rename = "@odata.id")]
+    pub odata_id: Option<String>,
+    pub id: Option<String>,
+    pub destination: Option<String>,
+    pub protocol: Option<String>,
+    pub event_types: Option<Vec<String>>,
+    pub context: Option<String>,
+}
+
+/// Serial Interface resource.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct SerialInterface {
+    #[serde(rename = "@odata.id")]
+    pub odata_id: Option<String>,
+    pub id: Option<String>,
+    pub bit_rate: Option<String>,
+    pub data_bits: Option<String>,
+    pub parity: Option<String>,
+    pub stop_bits: Option<String>,
+    pub flow_control: Option<String>,
+    pub interface_enabled: Option<bool>,
+}
+
+/// Software/Firmware Inventory item.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct SoftwareInventory {
+    #[serde(rename = "@odata.id")]
+    pub odata_id: Option<String>,
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub version: Option<String>,
+    pub updateable: Option<bool>,
+    pub status: Option<Status>,
+}
