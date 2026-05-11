@@ -1,0 +1,23 @@
+[package]
+name = "rufish"
+version = "0.1.0"
+authors = ["Eric Chen <610521240@gms.ndhu.edu.tw>"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+documentation = "https://docs.rs/rufish"
+repository = "https://github.com/dalof41014/rufish"
+description = "An asynchronous Redfish client library for BMC/server management in Rust."
+keywords = ["redfish", "bmc", "ipmi", "server-management", "async"]
+categories = ["network-programming", "hardware-support"]
+
+[dependencies]
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+log = "0.4"
+
+[dev-dependencies]
+env_logger = "0.11"
+tokio = { version = "1", features = ["full"] }
